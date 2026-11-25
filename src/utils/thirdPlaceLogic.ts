@@ -1,7 +1,6 @@
 import { DEFAULT_PLACE_FILTERS } from '../data/mockData';
 import type {
   ActiveFilterChip,
-  CostTier,
   CreateEventInput,
   EventItem,
   PlaceFilters,
@@ -9,6 +8,12 @@ import type {
   RecommendationItem,
   UserPreferences,
 } from '../types/thirdPlace';
+
+export const DISTANCE_SLIDER_MIN_MILES = 1;
+export const DISTANCE_SLIDER_MAX_MILES = 10;
+export const DISTANCE_SLIDER_OVER_10_VALUE = 13;
+export const COST_SLIDER_STOPS = [0, 10, 30, 50] as const;
+export const COST_SLIDER_MAX_DOLLARS = 50;
 
 export function parseOpenTillHour(label: string): number | null {
   if (!label || label === 'Any') return null;
@@ -198,8 +203,13 @@ export function getRecommendedItems(
   const eventCandidates = events
     .filter((evt) => {
       if (preferences.accessibleOnly && !evt.accessible) return false;
-      if (evt.distanceMiles > preferences.maxDistanceMiles) return false;
-      if (evt.costTier > preferences.maxCostTier) return false;
+      if (
+        preferences.maxDistanceMiles !== null &&
+        evt.distanceMiles > preferences.maxDistanceMiles
+      ) {
+        return false;
+      }
+      if (evt.priceNumeric > preferences.maxCostDollars) return false;
       return true;
     })
     .map((evt) => {
@@ -223,8 +233,13 @@ export function getRecommendedItems(
   const placeCandidates = places
     .filter((plc) => {
       if (preferences.accessibleOnly && !plc.accessible) return false;
-      if (plc.distanceMiles > preferences.maxDistanceMiles) return false;
-      if (plc.costTier > preferences.maxCostTier) return false;
+      if (
+        preferences.maxDistanceMiles !== null &&
+        plc.distanceMiles > preferences.maxDistanceMiles
+      ) {
+        return false;
+      }
+      if (plc.priceNumeric > preferences.maxCostDollars) return false;
       return true;
     })
     .map((plc) => {
@@ -324,19 +339,17 @@ export function formatIsoDateShort(isoDate: string): string {
 export function parsePriceMetadata(rawPrice: string): {
   display: string;
   numeric: number;
-  costTier: CostTier;
 } {
   const trimmed = rawPrice.trim();
   if (!trimmed || trimmed.toLowerCase() === 'free') {
-    return { display: 'Free', numeric: 0, costTier: 1 };
+    return { display: 'Free', numeric: 0 };
   }
   const numeric = Number(trimmed.replace(/^\$/, ''));
   if (Number.isNaN(numeric) || numeric <= 0) {
-    return { display: 'Free', numeric: 0, costTier: 1 };
+    return { display: 'Free', numeric: 0 };
   }
   const display = `$${Number.isInteger(numeric) ? numeric : numeric.toFixed(2)}`;
-  const costTier: CostTier = numeric <= 15 ? 1 : numeric <= 35 ? 2 : 3;
-  return { display, numeric, costTier };
+  return { display, numeric };
 }
 
 export function buildNewEvent(input: CreateEventInput, id: string): EventItem {
@@ -360,7 +373,6 @@ export function buildNewEvent(input: CreateEventInput, id: string): EventItem {
     time: `${input.startTime} – ${input.endTime}`,
     price: priceMeta.display,
     priceNumeric: priceMeta.numeric,
-    costTier: priceMeta.costTier,
     description:
       input.description.trim() ||
       'Community gathering created on Third Place. Everyone is welcome to join.',
@@ -374,6 +386,84 @@ export function buildNewEvent(input: CreateEventInput, id: string): EventItem {
   };
 }
 
-export function costTierToLabel(tier: CostTier): string {
-  return tier === 1 ? '$' : tier === 2 ? '$$' : '$$$';
+export function formatDistancePreference(
+  maxDistanceMiles: number | null,
+  compact = false
+): string {
+  if (maxDistanceMiles === null) {
+    return compact ? '> 10 mi' : '> 10 miles';
+  }
+  if (compact) {
+    return `Within ${maxDistanceMiles} mi`;
+  }
+  return `Within ${maxDistanceMiles} ${maxDistanceMiles === 1 ? 'mile' : 'miles'}`;
+}
+
+export function formatCostPreference(maxCostDollars: number): string {
+  if (maxCostDollars <= 0) {
+    return 'Free ($0)';
+  }
+  const formatted = Number.isInteger(maxCostDollars)
+    ? String(maxCostDollars)
+    : maxCostDollars.toFixed(2);
+  return `Up to $${formatted}`;
+}
+
+export function milesToDistanceSliderValue(maxDistanceMiles: number | null): number {
+  if (maxDistanceMiles === null) {
+    return DISTANCE_SLIDER_OVER_10_VALUE;
+  }
+  return Math.max(
+    DISTANCE_SLIDER_MIN_MILES,
+    Math.min(DISTANCE_SLIDER_MAX_MILES, Math.round(maxDistanceMiles))
+  );
+}
+
+export function resolveDistanceSliderChange(
+  rawSliderValue: number,
+  previousMiles: number | null
+): number | null {
+  if (previousMiles === null && rawSliderValue < DISTANCE_SLIDER_OVER_10_VALUE) {
+    return Math.min(DISTANCE_SLIDER_MAX_MILES, Math.max(DISTANCE_SLIDER_MIN_MILES, rawSliderValue));
+  }
+  if (rawSliderValue > DISTANCE_SLIDER_MAX_MILES) {
+    return null;
+  }
+  return Math.max(DISTANCE_SLIDER_MIN_MILES, rawSliderValue);
+}
+
+export function getNearestCostSliderIndex(dollars: number): number {
+  if (dollars <= COST_SLIDER_STOPS[0]) return 0;
+  if (dollars >= COST_SLIDER_STOPS[COST_SLIDER_STOPS.length - 1]) {
+    return COST_SLIDER_STOPS.length - 1;
+  }
+  let nearestIdx = 0;
+  let smallestDiff = Math.abs(dollars - COST_SLIDER_STOPS[0]);
+  for (let i = 1; i < COST_SLIDER_STOPS.length; i += 1) {
+    const diff = Math.abs(dollars - COST_SLIDER_STOPS[i]);
+    if (diff < smallestDiff) {
+      smallestDiff = diff;
+      nearestIdx = i;
+    }
+  }
+  return nearestIdx;
+}
+
+export function parseCustomCostInput(raw: string): {
+  valid: boolean;
+  value: number | null;
+  error?: string;
+} {
+  const trimmed = raw.trim().replace(/^\$/, '');
+  if (!trimmed) {
+    return { valid: false, value: null, error: 'Enter a dollar amount (0 or more).' };
+  }
+  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
+    return { valid: false, value: null, error: 'Enter a valid amount (e.g. 15 or 75).' };
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 10000) {
+    return { valid: false, value: null, error: 'Enter an amount between $0 and $10,000.' };
+  }
+  return { valid: true, value: Math.round(parsed * 100) / 100 };
 }

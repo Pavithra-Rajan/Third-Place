@@ -1,6 +1,9 @@
 import { ArrowLeft, Calendar, SlidersHorizontal, User, Users } from 'lucide-react';
 import type { EventItem, UserPreferences } from '../types/thirdPlace';
-import { costTierToLabel } from '../utils/thirdPlaceLogic';
+import {
+  formatCostPreference,
+  formatDistancePreference,
+} from '../utils/thirdPlaceLogic';
 
 interface ProfileScreenProps {
   upcomingEvents: EventItem[];
@@ -72,8 +75,9 @@ export function ProfileScreen({
             <strong>Accessible Only:</strong> {preferences.accessibleOnly ? 'Yes' : 'No'}
           </p>
           <p className="tabular-nums">
-            <strong>Distance:</strong> Within {preferences.maxDistanceMiles} mi ·{' '}
-            <strong>Cost:</strong> Up to {costTierToLabel(preferences.maxCostTier)}
+            <strong>Distance:</strong>{' '}
+            {formatDistancePreference(preferences.maxDistanceMiles, true)} ·{' '}
+            <strong>Cost:</strong> {formatCostPreference(preferences.maxCostDollars)}
           </p>
         </div>
       </section>

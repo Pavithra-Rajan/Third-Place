@@ -1,8 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Info, Plus, Search, X } from 'lucide-react';
 import { INTEREST_SUGGESTIONS } from '../data/mockData';
-import type { CostTier, UserPreferences } from '../types/thirdPlace';
-import { costTierToLabel } from '../utils/thirdPlaceLogic';
+import type { UserPreferences } from '../types/thirdPlace';
+import {
+  COST_SLIDER_STOPS,
+  DISTANCE_SLIDER_MIN_MILES,
+  DISTANCE_SLIDER_OVER_10_VALUE,
+  formatCostPreference,
+  formatDistancePreference,
+  getNearestCostSliderIndex,
+  milesToDistanceSliderValue,
+  parseCustomCostInput,
+  resolveDistanceSliderChange,
+} from '../utils/thirdPlaceLogic';
 
 interface PreferencesModalProps {
   currentPreferences: UserPreferences;
@@ -19,6 +29,32 @@ export function PreferencesModal({
   const [interestInput, setInterestInput] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [customCostText, setCustomCostText] = useState(
+    String(currentPreferences.maxCostDollars)
+  );
+  const [costError, setCostError] = useState<string | null>(null);
+
+  const interestsContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showDropdown) return;
+
+    const handlePointerOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        interestsContainerRef.current &&
+        !interestsContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerOutside);
+    document.addEventListener('touchstart', handlePointerOutside);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerOutside);
+      document.removeEventListener('touchstart', handlePointerOutside);
+    };
+  }, [showDropdown]);
 
   const filteredSuggestions = INTEREST_SUGGESTIONS.filter((topic) => {
     const alreadyAdded = draft.interests.some(
@@ -48,6 +84,56 @@ export function PreferencesModal({
       interests: prev.interests.filter((item) => item !== topic),
     }));
   };
+
+  const handleCostSliderChange = (value: number) => {
+    setDraft((prev) => ({ ...prev, maxCostDollars: value }));
+    setCustomCostText(String(value));
+    setCostError(null);
+  };
+
+  const handleCustomCostChange = (raw: string) => {
+    setCustomCostText(raw);
+    if (!raw.trim()) {
+      setCostError(null);
+      return;
+    }
+    const parsed = parseCustomCostInput(raw);
+    if (parsed.valid && parsed.value !== null) {
+      setDraft((prev) => ({ ...prev, maxCostDollars: parsed.value! }));
+      setCostError(null);
+    } else {
+      setCostError(parsed.error ?? 'Enter a valid dollar amount.');
+    }
+  };
+
+  const handleCustomCostBlur = () => {
+    if (!customCostText.trim()) {
+      setCustomCostText(String(draft.maxCostDollars));
+      setCostError(null);
+      return;
+    }
+    const parsed = parseCustomCostInput(customCostText);
+    if (parsed.valid && parsed.value !== null) {
+      setDraft((prev) => ({ ...prev, maxCostDollars: parsed.value! }));
+      setCustomCostText(String(parsed.value));
+      setCostError(null);
+    } else {
+      setCostError(parsed.error ?? 'Enter a valid dollar amount.');
+    }
+  };
+
+  const handleSave = () => {
+    const parsed = parseCustomCostInput(customCostText);
+    if (!parsed.valid || parsed.value === null) {
+      setCostError(parsed.error ?? 'Enter a valid dollar amount.');
+      return;
+    }
+    onSave({ ...draft, maxCostDollars: parsed.value });
+  };
+
+  const distanceSliderValue = milesToDistanceSliderValue(draft.maxDistanceMiles);
+  const isOverTenMiles = draft.maxDistanceMiles === null;
+  const costSliderIndex = getNearestCostSliderIndex(draft.maxCostDollars);
 
   return (
     <div
@@ -111,43 +197,67 @@ export function PreferencesModal({
 
           {/* Interests Autocomplete Search */}
           <div className="space-y-2">
-            <label
-              htmlFor="preferences-interests-input"
-              className="block text-[13.5px] font-bold text-[#131515]"
-            >
-              Interests
-            </label>
+            <div>
+              <span
+                id="preferences-interests-label"
+                className="inline-block text-[13.5px] font-bold text-[#131515]"
+              >
+                Interests
+              </span>
+            </div>
 
-            <div className="relative">
-              <Search className="w-4 h-4 text-[#2B2C28]/55 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                id="preferences-interests-input"
-                type="text"
-                value={interestInput}
-                onFocus={() => setShowDropdown(true)}
-                onChange={(e) => {
-                  setInterestInput(e.target.value);
-                  setShowDropdown(true);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (filteredSuggestions.length > 0 && interestInput.trim()) {
-                      addInterest(filteredSuggestions[0]);
-                    } else if (interestInput.trim()) {
-                      addInterest(interestInput);
+            <div
+              ref={interestsContainerRef}
+              onBlur={(e) => {
+                if (
+                  !interestsContainerRef.current?.contains(
+                    e.relatedTarget as Node | null
+                  )
+                ) {
+                  setShowDropdown(false);
+                }
+              }}
+              className="space-y-1.5"
+            >
+              {/* Keep Search icon anchored solely to the input container so opening the dropdown never shifts it */}
+              <div className="relative">
+                <Search
+                  data-testid="interests-search-icon"
+                  className="w-4 h-4 text-[#2B2C28]/55 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                />
+                <input
+                  id="preferences-interests-input"
+                  aria-labelledby="preferences-interests-label"
+                  type="text"
+                  value={interestInput}
+                  onFocus={() => setShowDropdown(true)}
+                  onClick={() => setShowDropdown(true)}
+                  onChange={(e) => {
+                    setInterestInput(e.target.value);
+                    setShowDropdown(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setShowDropdown(false);
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (filteredSuggestions.length > 0 && interestInput.trim()) {
+                        addInterest(filteredSuggestions[0]);
+                      } else if (interestInput.trim()) {
+                        addInterest(interestInput);
+                      }
                     }
-                  }
-                }}
-                placeholder="Search topics (e.g. Gardening, Pottery)"
-                className="w-full min-h-[44px] pl-9 pr-3 rounded-xl border border-[#2B2C28]/25 bg-[#FFFAFB] text-[13.5px] text-[#131515] placeholder:text-[#2B2C28]/45 focus:outline-none focus:border-[#339989]"
-              />
+                  }}
+                  placeholder="Search topics (e.g. Gardening, Pottery)"
+                  className="w-full min-h-[44px] pl-9 pr-3 rounded-xl border border-[#2B2C28]/25 bg-[#FFFAFB] text-[13.5px] text-[#131515] placeholder:text-[#2B2C28]/45 focus:outline-none focus:border-[#339989]"
+                />
+              </div>
 
               {showDropdown && filteredSuggestions.length > 0 && (
                 <ul
                   role="listbox"
                   aria-label="Interest suggestions"
-                  className="mt-1.5 max-h-[150px] overflow-y-auto rounded-xl border border-[#2B2C28]/20 bg-[#FFFAFB] shadow-md divide-y divide-[#2B2C28]/8"
+                  className="max-h-[150px] overflow-y-auto rounded-xl border border-[#2B2C28]/20 bg-[#FFFAFB] shadow-md divide-y divide-[#2B2C28]/8"
                 >
                   {filteredSuggestions.slice(0, 6).map((topic) => (
                     <li key={topic}>
@@ -239,7 +349,7 @@ export function PreferencesModal({
             </div>
           </fieldset>
 
-          {/* Distance Slider */}
+          {/* Distance Slider (1 to 10 mi, plus > 10 mi) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label
@@ -248,33 +358,71 @@ export function PreferencesModal({
               >
                 Distance
               </label>
-              <span className="text-[13px] font-bold text-[#339989] tabular-nums">
-                Within {draft.maxDistanceMiles} {draft.maxDistanceMiles === 1 ? 'mile' : 'miles'}
+              <span
+                data-testid="distance-value-label"
+                className="text-[13px] font-bold text-[#339989] tabular-nums"
+              >
+                {formatDistancePreference(draft.maxDistanceMiles)}
               </span>
             </div>
             <input
               id="preferences-distance-slider"
               type="range"
-              min={1}
-              max={10}
+              min={DISTANCE_SLIDER_MIN_MILES}
+              max={DISTANCE_SLIDER_OVER_10_VALUE}
               step={1}
-              value={draft.maxDistanceMiles}
-              onChange={(e) =>
+              value={distanceSliderValue}
+              aria-valuetext={formatDistancePreference(draft.maxDistanceMiles)}
+              onChange={(e) => {
+                const rawVal = Number(e.target.value);
                 setDraft((prev) => ({
                   ...prev,
-                  maxDistanceMiles: Number(e.target.value),
-                }))
-              }
+                  maxDistanceMiles: resolveDistanceSliderChange(
+                    rawVal,
+                    prev.maxDistanceMiles
+                  ),
+                }));
+              }}
               className="w-full tp-slider"
             />
-            <div className="flex justify-between text-[11px] text-[#2B2C28]/60 tabular-nums">
-              <span>1 mi</span>
-              <span>5 mi</span>
-              <span>10 mi</span>
+            {/* Tick labels positioned at the exact thumb center for 1 (0%), 5 (4/12), 10 (9/12), and >10 (100%) */}
+            <div className="relative h-4 text-[11px] text-[#2B2C28]/60 tabular-nums select-none">
+              <span
+                data-testid="distance-tick-1"
+                className={`absolute left-0 ${
+                  draft.maxDistanceMiles === 1 ? 'font-bold text-[#339989]' : ''
+                }`}
+              >
+                1 mi
+              </span>
+              <span
+                data-testid="distance-tick-5"
+                className={`absolute left-[calc(11px+(100%-22px)*0.333333)] -translate-x-1/2 ${
+                  draft.maxDistanceMiles === 5 ? 'font-bold text-[#339989]' : ''
+                }`}
+              >
+                5 mi
+              </span>
+              <span
+                data-testid="distance-tick-10"
+                className={`absolute left-[calc(11px+(100%-22px)*0.75)] -translate-x-1/2 ${
+                  draft.maxDistanceMiles === 10 ? 'font-bold text-[#339989]' : ''
+                }`}
+              >
+                10 mi
+              </span>
+              <span
+                data-testid="distance-tick-over10"
+                className={`absolute right-0 ${
+                  isOverTenMiles ? 'font-bold text-[#339989]' : ''
+                }`}
+              >
+                &gt; 10 mi
+              </span>
             </div>
           </div>
 
-          {/* Cost Slider ($ to $$$) */}
+          {/* Cost Slider ($0, $10, $30, $50) + Custom Dollar Input */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label
@@ -283,30 +431,103 @@ export function PreferencesModal({
               >
                 Cost
               </label>
-              <span className="text-[13px] font-bold text-[#339989]">
-                Up to {costTierToLabel(draft.maxCostTier)}
+              <span
+                data-testid="cost-value-label"
+                className="text-[13px] font-bold text-[#339989] tabular-nums"
+              >
+                {formatCostPreference(draft.maxCostDollars)}
               </span>
             </div>
             <input
               id="preferences-cost-slider"
               type="range"
-              min={1}
-              max={3}
+              min={0}
+              max={COST_SLIDER_STOPS.length - 1}
               step={1}
-              value={draft.maxCostTier}
-              onChange={(e) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  maxCostTier: Number(e.target.value) as CostTier,
-                }))
-              }
+              value={costSliderIndex}
+              aria-valuetext={formatCostPreference(draft.maxCostDollars)}
+              onChange={(e) => {
+                const idx = Number(e.target.value);
+                handleCostSliderChange(COST_SLIDER_STOPS[idx]);
+              }}
               className="w-full tp-slider"
             />
-            <div className="flex justify-between text-[12px] font-semibold text-[#2B2C28]/70">
-              <span>$</span>
-              <span>$$</span>
-              <span>$$$</span>
+            <div className="relative h-4 text-[11px] font-medium text-[#2B2C28]/65 tabular-nums select-none">
+              <span
+                data-testid="cost-tick-0"
+                className={`absolute left-0 ${
+                  draft.maxCostDollars === 0 ? 'font-bold text-[#339989]' : ''
+                }`}
+              >
+                $0
+              </span>
+              <span
+                data-testid="cost-tick-10"
+                className={`absolute left-[calc(11px+(100%-22px)*0.333333)] -translate-x-1/2 ${
+                  draft.maxCostDollars === 10 ? 'font-bold text-[#339989]' : ''
+                }`}
+              >
+                $10
+              </span>
+              <span
+                data-testid="cost-tick-30"
+                className={`absolute left-[calc(11px+(100%-22px)*0.666667)] -translate-x-1/2 ${
+                  draft.maxCostDollars === 30 ? 'font-bold text-[#339989]' : ''
+                }`}
+              >
+                $30
+              </span>
+              <span
+                data-testid="cost-tick-50"
+                className={`absolute right-0 ${
+                  draft.maxCostDollars === 50 ? 'font-bold text-[#339989]' : ''
+                }`}
+              >
+                $50
+              </span>
             </div>
+
+            <div className="pt-1 flex items-center justify-between gap-2.5">
+              <label
+                htmlFor="preferences-cost-custom"
+                className="text-[12.5px] font-semibold text-[#2B2C28]/80 whitespace-nowrap"
+              >
+                Custom max ($)
+              </label>
+              <div className="relative w-32">
+                <span
+                  aria-hidden="true"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-[#2B2C28]/65 pointer-events-none"
+                >
+                  $
+                </span>
+                <input
+                  id="preferences-cost-custom"
+                  type="text"
+                  inputMode="decimal"
+                  value={customCostText}
+                  onChange={(e) => handleCustomCostChange(e.target.value)}
+                  onBlur={handleCustomCostBlur}
+                  placeholder="e.g. 75"
+                  aria-invalid={Boolean(costError)}
+                  aria-describedby={costError ? 'preferences-cost-error' : undefined}
+                  className={`w-full min-h-[38px] pl-7 pr-3 rounded-xl border bg-[#FFFAFB] text-[13.5px] font-semibold text-[#131515] tabular-nums focus:outline-none ${
+                    costError
+                      ? 'border-red-600 focus:border-red-600'
+                      : 'border-[#2B2C28]/25 focus:border-[#339989]'
+                  }`}
+                />
+              </div>
+            </div>
+            {costError && (
+              <p
+                id="preferences-cost-error"
+                role="alert"
+                className="text-[12px] text-red-600 font-medium"
+              >
+                {costError}
+              </p>
+            )}
           </div>
         </div>
 
@@ -314,7 +535,7 @@ export function PreferencesModal({
         <div className="px-4 py-3.5 border-t border-[#2B2C28]/12 bg-[#FFFAFB] shrink-0">
           <button
             type="button"
-            onClick={() => onSave(draft)}
+            onClick={handleSave}
             className="w-full min-h-[46px] rounded-xl bg-[#339989] hover:bg-[#2B7F71] text-[#FFFAFB] text-[14.5px] font-bold transition-colors"
           >
             Customize

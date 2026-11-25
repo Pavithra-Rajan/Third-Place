@@ -1,0 +1,6 @@
+{
+  "name": "Third Place",
+  "description": "Medium-fidelity mobile app prototype for finding cafes, study spots, and community events in NYC.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

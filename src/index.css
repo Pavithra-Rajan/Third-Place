@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --color-ink: #131515;
+  --color-charcoal: #2B2C28;
+  --color-teal: #339989;
+  --color-mint: #7DE2D1;
+  --color-snow: #FFFAFB;
+}
+
+@layer base {
+  html,
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom range slider styling matching Third Place palette */
+  input[type="range"].tp-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 9999px;
+    background: #d8dcd9;
+    outline: none;
+  }
+
+  input[type="range"].tp-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    background: #339989;
+    border: 3px solid #FFFAFB;
+    box-shadow: 0 1px 4px rgba(19, 21, 21, 0.28);
+    cursor: pointer;
+  }
+
+  input[type="range"].tp-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    background: #339989;
+    border: 3px solid #FFFAFB;
+    box-shadow: 0 1px 4px rgba(19, 21, 21, 0.28);
+    cursor: pointer;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

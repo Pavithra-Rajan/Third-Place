@@ -20,7 +20,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   interests: [],
   accessibleOnly: false,
   maxDistanceMiles: 5,
-  maxCostTier: 2,
+  maxCostDollars: 30,
 };
 
 export const SEATING_OPTIONS: SeatingType[] = [
@@ -115,7 +115,6 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '2:00 PM – 5:30 PM',
     price: 'Free',
     priceNumeric: 0,
-    costTier: 1,
     description:
       'Casual blitz and classical games on the southwest tables. Extra boards and clocks are available—drop in solo or bring a friend. All ratings welcome.',
     tags: ['Accessible', 'All Ages', 'Outdoor'],
@@ -137,7 +136,6 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '6:00 PM – 8:30 PM',
     price: 'Free',
     priceNumeric: 0,
-    costTier: 1,
     description:
       'Friday evening chess tables and quiet strategy pairings inside the seventh-floor reading lounge. Step-free elevator entrance on 40th Street.',
     tags: ['Accessible', '18+', 'Indoor'],
@@ -159,7 +157,6 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '7:00 PM – 10:00 PM',
     price: '$10',
     priceNumeric: 10,
-    costTier: 1,
     description:
       'Friendly four-round Swiss pairings with espresso and pastries available at the counter. Admission includes table fee and tournament clock loan.',
     tags: ['Accessible', '18+'],
@@ -181,7 +178,6 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '11:00 AM – 1:30 PM',
     price: '$10',
     priceNumeric: 10,
-    costTier: 1,
     description:
       'Hands-on cold-weather container gardening session covering winter herbs, soil composting, and small-balcony planters for NYC apartments.',
     tags: ['Accessible', '18+'],
@@ -203,7 +199,6 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '1:00 PM – 3:30 PM',
     price: '$25',
     priceNumeric: 25,
-    costTier: 2,
     description:
       'Learn pruning, wiring, and indoor care for miniature ficus and juniper trees. Starter shears and ceramic tray provided during the workshop.',
     tags: ['Accessible', 'Beginner Friendly'],
@@ -225,7 +220,6 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '6:30 PM – 9:00 PM',
     price: '$30',
     priceNumeric: 30,
-    costTier: 2,
     description:
       'Relaxed hand-building night for mugs and small plant pots. Includes stoneware clay, underglazes, and kiln firing pickup two weeks later.',
     tags: ['Accessible', '18+'],
@@ -247,7 +241,6 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '12:00 PM – 2:30 PM',
     price: 'Free',
     priceNumeric: 0,
-    costTier: 1,
     description:
       'Bring propagated cuttings, surplus seeds, or a spare terracotta pot to trade with neighbors. Hot herbal tea served at the garden pergola.',
     tags: ['Accessible', 'Outdoor'],
@@ -269,7 +262,6 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '6:30 PM – 8:30 PM',
     price: 'Free',
     priceNumeric: 0,
-    costTier: 1,
     description:
       'Bring whatever book you are currently reading for one hour of companionable silence, followed by optional neighborhood book swaps.',
     tags: ['Accessible', '18+'],
@@ -291,7 +283,6 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '10:30 AM – 12:30 PM',
     price: '$10',
     priceNumeric: 10,
-    costTier: 1,
     description:
       'Morning architectural sketching meetup over pour-over coffee. Bring a notebook and fineliner; no prior drawing experience required.',
     tags: ['18+', 'Indoor'],
@@ -313,7 +304,6 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '8:00 PM – 10:30 PM',
     price: '$15',
     priceNumeric: 15,
-    costTier: 2,
     description:
       'Intimate late-evening acoustic trio and open jazz standards jam. One drink or pastry minimum supports the local musicians.',
     tags: ['18+', 'Indoor'],
@@ -322,6 +312,48 @@ export const INITIAL_EVENTS: EventItem[] = [
     imageLabel: 'Event Photo',
     capacity: '30',
     rsvpCount: 24,
+  },
+  {
+    id: 'evt-garden-3',
+    name: 'Wave Hill Botanical Walk',
+    location: 'Wave Hill Public Garden, Riverdale',
+    neighborhood: 'Riverdale, Bronx',
+    distanceMiles: 11.4,
+    host: 'Bronx Flora Society',
+    date: 'Sun, Dec 6',
+    isoDate: '2026-12-06',
+    time: '1:00 PM – 3:00 PM',
+    price: '$12',
+    priceNumeric: 12,
+    description:
+      'Guided conservatory and winter garden stroll overlooking the Hudson River, followed by botanical sketching in the heated glasshouse.',
+    tags: ['Accessible', 'All Ages', 'Outdoor'],
+    accessible: true,
+    topics: ['Gardening', 'Sketching'],
+    imageLabel: 'Event Photo',
+    capacity: '25',
+    rsvpCount: 11,
+  },
+  {
+    id: 'evt-knit-1',
+    name: 'Village Knit & Tea Circle',
+    location: 'Black Cat LES Back Lounge, Lower East Side',
+    neighborhood: 'Lower East Side',
+    distanceMiles: 0.4,
+    host: 'LES Fiber Craft Guild',
+    date: 'Wed, Dec 2',
+    isoDate: '2026-12-02',
+    time: '6:00 PM – 8:30 PM',
+    price: 'Free',
+    priceNumeric: 0,
+    description:
+      'Relaxed midweek knitting and crochet meetup on the back couches. Bring any project in progress; beginners welcome with spare needles on hand.',
+    tags: ['Accessible', 'All Ages', 'Indoor'],
+    accessible: true,
+    topics: ['Knitting', 'Reading'],
+    imageLabel: 'Event Photo',
+    capacity: '20',
+    rsvpCount: 14,
   },
 ];
 
@@ -340,10 +372,10 @@ export const INITIAL_PLACES: PlaceItem[] = [
     openTillLabel: '10 PM',
     powerSupply: true,
     laptopFriendly: true,
-    priceTag: '$',
-    costTier: 1,
+    priceTag: '~$8',
+    priceNumeric: 8,
     accessible: true,
-    topics: ['Silent Study', 'Reading', 'Coffee Tasting'],
+    topics: ['Silent Study', 'Reading', 'Coffee Tasting', 'Knitting', 'Jazz'],
     description:
       'Neighborhood living-room cafe with deep couches, reliable WiFi, power outlets along the brick wall, and late evening hours.',
     imageLabel: 'Place Photo',
@@ -363,8 +395,8 @@ export const INITIAL_PLACES: PlaceItem[] = [
     openTillLabel: '7 PM',
     powerSupply: true,
     laptopFriendly: true,
-    priceTag: '$$',
-    costTier: 2,
+    priceTag: '~$15',
+    priceNumeric: 15,
     accessible: true,
     topics: ['Coffee Tasting', 'Gardening'],
     description:
@@ -387,7 +419,7 @@ export const INITIAL_PLACES: PlaceItem[] = [
     powerSupply: true,
     laptopFriendly: true,
     priceTag: 'Free',
-    costTier: 1,
+    priceNumeric: 0,
     accessible: true,
     topics: ['Silent Study', 'Reading', 'Book Club'],
     description:
@@ -409,8 +441,8 @@ export const INITIAL_PLACES: PlaceItem[] = [
     openTillLabel: '9 PM',
     powerSupply: true,
     laptopFriendly: true,
-    priceTag: '$',
-    costTier: 1,
+    priceTag: '~$8',
+    priceNumeric: 8,
     accessible: true,
     topics: ['Silent Study', 'Coffee Tasting'],
     description:
@@ -432,10 +464,10 @@ export const INITIAL_PLACES: PlaceItem[] = [
     openTillLabel: '6 PM',
     powerSupply: false,
     laptopFriendly: false,
-    priceTag: '$$',
-    costTier: 2,
+    priceTag: '~$15',
+    priceNumeric: 15,
     accessible: true,
-    topics: ['Coffee Tasting', 'Reading', 'Sketching'],
+    topics: ['Coffee Tasting', 'Reading', 'Sketching', 'Pottery'],
     description:
       'Nordic bakery and roaster best suited for analog reading, sketching, or catching up over cardamom buns without screens.',
     imageLabel: 'Place Photo',
@@ -455,8 +487,8 @@ export const INITIAL_PLACES: PlaceItem[] = [
     openTillLabel: '7 PM',
     powerSupply: false,
     laptopFriendly: true,
-    priceTag: '$',
-    costTier: 1,
+    priceTag: '~$10',
+    priceNumeric: 10,
     accessible: true,
     topics: ['Coffee Tasting', 'Photography'],
     description:
@@ -478,8 +510,8 @@ export const INITIAL_PLACES: PlaceItem[] = [
     openTillLabel: '11 PM',
     powerSupply: true,
     laptopFriendly: true,
-    priceTag: '$$',
-    costTier: 2,
+    priceTag: '~$15',
+    priceNumeric: 15,
     accessible: true,
     topics: ['Coffee Tasting', 'Board Games', 'Chess'],
     description:
@@ -501,8 +533,8 @@ export const INITIAL_PLACES: PlaceItem[] = [
     openTillLabel: '6 PM',
     powerSupply: false,
     laptopFriendly: false,
-    priceTag: '$$$',
-    costTier: 3,
+    priceTag: '~$25',
+    priceNumeric: 25,
     accessible: false,
     topics: ['Coffee Tasting', 'Sketching'],
     description:

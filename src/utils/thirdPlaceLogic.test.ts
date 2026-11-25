@@ -8,11 +8,19 @@ import {
 } from '../data/mockData';
 import {
   buildNewEvent,
+  COST_SLIDER_STOPS,
+  DISTANCE_SLIDER_OVER_10_VALUE,
   filterAndSortPlaces,
   filterEvents,
+  formatCostPreference,
+  formatDistancePreference,
   getActiveFilterChips,
+  getNearestCostSliderIndex,
   getRecommendedItems,
+  milesToDistanceSliderValue,
+  parseCustomCostInput,
   removeFilterChip,
+  resolveDistanceSliderChange,
   validateCreateEventForm,
 } from './thirdPlaceLogic';
 
@@ -73,13 +81,66 @@ test('getRecommendedItems surfaces gardening and bonsai events when Gardening in
     interests: ['Gardening', 'Pottery'],
     accessibleOnly: true,
     maxDistanceMiles: 5,
-    maxCostTier: 2,
+    maxCostDollars: 30,
   });
 
   const titles = recs.map((r) => r.title);
   assert.ok(titles.includes('Urban Rooftop Gardening'));
   assert.ok(titles.includes('Brooklyn Bonsai Workshop'));
   assert.ok(titles.includes('East Village Clay & Pottery'));
+  assert.ok(!titles.includes('Wave Hill Botanical Walk'));
+});
+
+test('getRecommendedItems includes >10 mile events when maxDistanceMiles is null and filters strictly by maxCostDollars', () => {
+  const overTenRecs = getRecommendedItems(INITIAL_EVENTS, INITIAL_PLACES, {
+    ...DEFAULT_PREFERENCES,
+    interests: ['Gardening'],
+    accessibleOnly: true,
+    maxDistanceMiles: null,
+    maxCostDollars: 12,
+  });
+
+  const titles = overTenRecs.map((r) => r.title);
+  assert.ok(titles.includes('Wave Hill Botanical Walk'));
+  assert.ok(titles.includes('Urban Rooftop Gardening'));
+  assert.ok(titles.includes('Community Herb Swap'));
+  assert.ok(!titles.includes('Brooklyn Bonsai Workshop')); // $25 > $12
+  assert.ok(!titles.includes('East Village Clay & Pottery')); // $30 > $12
+});
+
+test('distance and cost formatting and custom cost parsing handle edge cases', () => {
+  assert.equal(formatDistancePreference(1), 'Within 1 mile');
+  assert.equal(formatDistancePreference(5), 'Within 5 miles');
+  assert.equal(formatDistancePreference(null), '> 10 miles');
+  assert.equal(formatDistancePreference(null, true), '> 10 mi');
+
+  assert.equal(formatCostPreference(0), 'Free ($0)');
+  assert.equal(formatCostPreference(25), 'Up to $25');
+  assert.equal(formatCostPreference(75), 'Up to $75');
+
+  assert.deepEqual(parseCustomCostInput('75'), { valid: true, value: 75 });
+  assert.deepEqual(parseCustomCostInput('$12.50'), { valid: true, value: 12.5 });
+  assert.deepEqual(parseCustomCostInput('0'), { valid: true, value: 0 });
+  assert.equal(parseCustomCostInput('-10').valid, false);
+  assert.equal(parseCustomCostInput('abc').valid, false);
+  assert.equal(parseCustomCostInput('').valid, false);
+
+  assert.deepEqual([...COST_SLIDER_STOPS], [0, 10, 30, 50]);
+  assert.equal(getNearestCostSliderIndex(0), 0);
+  assert.equal(getNearestCostSliderIndex(10), 1);
+  assert.equal(getNearestCostSliderIndex(12), 1);
+  assert.equal(getNearestCostSliderIndex(25), 2);
+  assert.equal(getNearestCostSliderIndex(30), 2);
+  assert.equal(getNearestCostSliderIndex(50), 3);
+  assert.equal(getNearestCostSliderIndex(75), 3);
+
+  assert.equal(milesToDistanceSliderValue(5), 5);
+  assert.equal(milesToDistanceSliderValue(10), 10);
+  assert.equal(milesToDistanceSliderValue(null), DISTANCE_SLIDER_OVER_10_VALUE);
+  assert.equal(resolveDistanceSliderChange(10, 5), 10);
+  assert.equal(resolveDistanceSliderChange(11, 10), null);
+  assert.equal(resolveDistanceSliderChange(12, null), 10);
+  assert.equal(resolveDistanceSliderChange(7, null), 7);
 });
 
 test('validateCreateEventForm enforces required fields and valid options', () => {

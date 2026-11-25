@@ -10,8 +10,6 @@ export type SeatingType =
 
 export type SortOption = 'Distance' | 'Relevance';
 
-export type CostTier = 1 | 2 | 3; // 1 = $, 2 = $$, 3 = $$$
-
 export interface EventItem {
   id: string;
   name: string;
@@ -24,7 +22,6 @@ export interface EventItem {
   time: string; // e.g. "6:30 PM – 9:00 PM"
   price: string; // "Free", "$10", "$15", etc.
   priceNumeric: number;
-  costTier: CostTier;
   description: string;
   tags: string[]; // e.g. ["Accessible", "18+"]
   accessible: boolean;
@@ -49,8 +46,8 @@ export interface PlaceItem {
   openTillLabel: string; // e.g. "9 PM"
   powerSupply: boolean;
   laptopFriendly: boolean;
-  priceTag: string; // "Free", "$", "$$", "$$$"
-  costTier: CostTier;
+  priceTag: string; // "Free", "~$8", "~$15", "~$25"
+  priceNumeric: number;
   accessible: boolean;
   topics: string[];
   description: string;
@@ -77,8 +74,8 @@ export interface ActiveFilterChip {
 export interface UserPreferences {
   interests: string[];
   accessibleOnly: boolean;
-  maxDistanceMiles: number;
-  maxCostTier: CostTier;
+  maxDistanceMiles: number | null; // 1–10 miles, or null for > 10 miles (any distance)
+  maxCostDollars: number;
 }
 
 export interface CreateEventInput {

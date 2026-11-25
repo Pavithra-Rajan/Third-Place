@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { AppHeader } from './components/AppHeader';
 import { CreateEventScreen } from './components/CreateEventScreen';
@@ -48,13 +48,15 @@ export default function App() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
   const [showVoiceOverlay, setShowVoiceOverlay] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isRefreshingForYou, setIsRefreshingForYou] = useState(false);
+  const refreshTimerRef = useRef<number | null>(null);
 
-  const triggerToast = useCallback((message: string) => {
-    setToastMessage(message);
-    window.setTimeout(() => {
-      setToastMessage((current) => (current === message ? null : current));
-    }, 2600);
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    };
   }, []);
 
   const upcomingEvents = useMemo(
@@ -143,11 +145,26 @@ export default function App() {
 
   const handleSavePreferences = useCallback(
     (nextPreferences: UserPreferences) => {
-      setPreferences(nextPreferences);
       setShowPreferencesModal(false);
-      triggerToast('Preferences saved — For You updated');
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+
+      if (route.name !== 'home') {
+        setPreferences(nextPreferences);
+        setIsRefreshingForYou(false);
+        return;
+      }
+
+      setIsRefreshingForYou(true);
+      refreshTimerRef.current = window.setTimeout(() => {
+        setPreferences(nextPreferences);
+        setIsRefreshingForYou(false);
+        refreshTimerRef.current = null;
+      }, 750);
     },
-    [triggerToast]
+    [route.name]
   );
 
   const handleCompleteVoiceSearch = useCallback(
@@ -201,7 +218,7 @@ export default function App() {
           upcomingEvents={upcomingEvents}
           myEvents={myEvents}
           recommendations={recommendations}
-          preferences={preferences}
+          isRefreshingForYou={isRefreshingForYou}
           onOpenCustomize={() => setShowPreferencesModal(true)}
           onSelectEvent={(eventId) =>
             setRoute({ name: 'event-detail', eventId, returnTo: 'home' })
@@ -285,16 +302,6 @@ export default function App() {
             setRoute({ name: 'event-detail', eventId, returnTo: 'profile' })
           }
         />
-      )}
-
-      {/* Subtle Toast Confirmation */}
-      {toastMessage && (
-        <div
-          role="status"
-          className="absolute top-[60px] left-4 right-4 z-30 rounded-xl bg-[#131515] text-[#FFFAFB] px-3.5 py-2.5 text-[12.5px] font-semibold shadow-lg border border-[#7DE2D1]/40 text-center"
-        >
-          {toastMessage}
-        </div>
       )}
 
       {/* Consistent Floating Create Event + Button on Bottom */}

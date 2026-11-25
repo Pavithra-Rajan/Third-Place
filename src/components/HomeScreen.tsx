@@ -1,5 +1,6 @@
-import { Calendar, MapPin, SlidersHorizontal, Users } from 'lucide-react';
-import type { EventItem, RecommendationItem, UserPreferences } from '../types/thirdPlace';
+import { useEffect, useRef } from 'react';
+import { Calendar, Loader2, MapPin, SlidersHorizontal, Users } from 'lucide-react';
+import type { EventItem, RecommendationItem } from '../types/thirdPlace';
 import { ImagePlaceholder } from './ImagePlaceholder';
 import { SearchBar } from './SearchBar';
 
@@ -13,7 +14,7 @@ interface HomeScreenProps {
   upcomingEvents: EventItem[];
   myEvents: EventItem[];
   recommendations: RecommendationItem[];
-  preferences: UserPreferences;
+  isRefreshingForYou: boolean;
   onOpenCustomize: () => void;
   onSelectEvent: (eventId: string) => void;
   onSelectPlace: (placeId: string) => void;
@@ -29,11 +30,21 @@ export function HomeScreen({
   upcomingEvents,
   myEvents,
   recommendations,
-  preferences,
+  isRefreshingForYou,
   onOpenCustomize,
   onSelectEvent,
   onSelectPlace,
 }: HomeScreenProps) {
+  const forYouSectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (isRefreshingForYou) {
+      forYouSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  }, [isRefreshingForYou]);
   return (
     <main className="flex-1 overflow-y-auto px-4 pt-3 pb-24 space-y-6">
       {/* Search Bar & Quick Browse Triggers */}
@@ -188,18 +199,15 @@ export function HomeScreen({
       </section>
 
       {/* For You Section */}
-      <section aria-labelledby="for-you-heading" className="space-y-3">
+      <section
+        ref={forYouSectionRef}
+        aria-labelledby="for-you-heading"
+        className="space-y-3"
+      >
         <div className="flex items-center justify-between gap-2">
-          <div>
-            <h2 id="for-you-heading" className="text-[16px] font-bold text-[#131515] tracking-tight">
-              For You
-            </h2>
-            {preferences.interests.length > 0 && (
-              <p className="text-[12px] text-[#2B2C28]/65 mt-0.5">
-                Tuned for {preferences.interests.join(', ')}
-              </p>
-            )}
-          </div>
+          <h2 id="for-you-heading" className="text-[16px] font-bold text-[#131515] tracking-tight">
+            For You
+          </h2>
 
           <button
             type="button"
@@ -211,7 +219,19 @@ export function HomeScreen({
           </button>
         </div>
 
-        {recommendations.length === 0 ? (
+        {isRefreshingForYou && (
+          <div
+            role="status"
+            aria-live="polite"
+            data-testid="for-you-loading"
+            className="flex items-center justify-center gap-2 py-2 text-[12.5px] font-medium text-[#339989]"
+          >
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
+            <span>Refreshing...</span>
+          </div>
+        )}
+
+        {recommendations.length === 0 && !isRefreshingForYou ? (
           <div className="rounded-xl border border-dashed border-[#2B2C28]/25 bg-[#2B2C28]/[0.03] px-4 py-5 text-center space-y-2">
             <p className="text-[13px] text-[#2B2C28]/75">
               No places or events match your current preferences.
@@ -225,7 +245,12 @@ export function HomeScreen({
             </button>
           </div>
         ) : (
-          <div className="space-y-2.5" data-testid="for-you-list">
+          <div
+            className={`space-y-2.5 transition-opacity duration-200 ${
+              isRefreshingForYou ? 'opacity-45 pointer-events-none' : 'opacity-100'
+            }`}
+            data-testid="for-you-list"
+          >
             {recommendations.map((item) => (
               <button
                 key={`${item.kind}-${item.id}`}
@@ -238,18 +263,14 @@ export function HomeScreen({
                 <ImagePlaceholder className="w-[72px] h-[72px] rounded-lg shrink-0" compact />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-semibold text-[#339989]">
-                      {item.kind === 'event' ? 'Event' : 'Place'}
-                      {item.matchedTopic ? ` · ${item.matchedTopic}` : ''}
-                    </span>
+                    <h3 className="text-[14px] font-semibold text-[#131515] leading-snug truncate">
+                      {item.title}
+                    </h3>
                     <span className="text-[12px] font-bold text-[#131515] tabular-nums shrink-0">
                       {item.price}
                     </span>
                   </div>
-                  <h3 className="text-[14px] font-semibold text-[#131515] leading-snug truncate mt-0.5">
-                    {item.title}
-                  </h3>
-                  <p className="text-[12px] text-[#2B2C28]/75 truncate mt-0.5">{item.subtitle}</p>
+                  <p className="text-[12px] text-[#2B2C28]/75 truncate mt-1">{item.subtitle}</p>
                   <p className="text-[11.5px] text-[#2B2C28]/60 truncate mt-0.5 tabular-nums">
                     {item.meta}
                   </p>
